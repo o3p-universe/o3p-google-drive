@@ -28,6 +28,11 @@ class ChangeFolderDialog extends Component {
         this.state = proxy({ value: "", busy: false, error: "" });
     }
 
+    onInput(event) {
+        this.state.value = event.target.value;
+        this.state.error = "";
+    }
+
     async onConfirm() {
         if (this.state.busy) {
             return;

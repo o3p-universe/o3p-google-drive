@@ -5,7 +5,7 @@
             <p>Paste the new folder ID. You can also paste the full Google Drive folder link.</p>
             <label for="o3p_drive_new_folder" class="form-label">Folder ID or link</label>
             <input id="o3p_drive_new_folder" type="text" class="form-control"
-                   t-model="this.state.value" t-att-disabled="this.state.busy"
+                   t-att-value="this.state.value" t-on-input="this.onInput" t-att-disabled="this.state.busy"
                    t-att-aria-invalid="this.state.error ? 'true' : 'false'"
                    aria-describedby="o3p_drive_folder_error"/>
             <div t-if="this.state.error" id="o3p_drive_folder_error"
