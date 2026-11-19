@@ -1,5 +1,6 @@
 /** @odoo-module **/
 
+import { Dialog } from "@web/core/dialog/dialog";
 import { registry } from "@web/core/registry";
 import { browser } from "@web/core/browser/browser";
 import { _t } from "@web/core/l10n/translation";
@@ -18,6 +19,32 @@ import {
 
 import { EXPLORER_VIEW_MODES, ExplorerNavigator } from "./explorer";
 
+class ChangeFolderDialog extends Component {
+    static template = "o3p_google_drive.ChangeFolderDialog";
+    static components = { Dialog };
+    props = useProps({ close: t.function(), apply: t.function() });
+
+    setup() {
+        this.state = proxy({ value: "", busy: false, error: "" });
+    }
+
+    async onConfirm() {
+        if (this.state.busy) {
+            return;
+        }
+        this.state.busy = true;
+        this.state.error = "";
+        try {
+            await this.props.apply(this.state.value);
+            this.props.close();
+        } catch (error) {
+            this.state.error = error.data?.message || error.message || _t("Could not change the folder.");
+        } finally {
+            this.state.busy = false;
+        }
+    }
+}
+
 export class GoogleDriveExplorerField extends Component {
     static template = "o3p_google_drive.GoogleDriveExplorerField";
 
@@ -31,6 +58,7 @@ export class GoogleDriveExplorerField extends Component {
 
     setup() {
         this.orm = useService("orm");
+        this.dialog = useService("dialog");
         this.actionService = useService("action");
         this.notification = useService("notification");
         this.navigator = null;
@@ -292,6 +320,33 @@ export class GoogleDriveExplorerField extends Component {
         };
         explorer.addEventListener("transitionend", reveal, { once: true });
         browser.setTimeout(reveal, 220);
+    }
+
+    get canChangeFolder() {
+        const field = this.props.record.fields[this.props.name];
+        return this.state.isHome && Boolean(this.rootId) &&
+            (field.type === "many2one" || this.props.name === "gid");
+    }
+
+    onChangeFolder() {
+        if (!this.canChangeFolder) {
+            return;
+        }
+        this.dialog.add(ChangeFolderDialog, {
+            apply: async (value) => {
+                const isRelation = this.props.record.fields[this.props.name].type === "many2one";
+                const folder = await this.orm.call(
+                    "o3p.google.drive.item", "validate_explorer_folder", [value, isRelation]
+                );
+                await this.props.record.update({
+                    [this.props.name]: isRelation ? { id: folder.id, display_name: folder.name } : folder.gid,
+                });
+                if (!(await this.props.record.save())) {
+                    throw new Error(_t("Could not save the record. Check required fields and try again."));
+                }
+                await this.initialize(this._rootId(this.props));
+            },
+        });
     }
 
     onOpenCurrentInDrive() {

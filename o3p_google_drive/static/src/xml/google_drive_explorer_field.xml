@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
+    <t t-name="o3p_google_drive.ChangeFolderDialog">
+        <Dialog title="'Change Google Drive folder'" size="'md'">
+            <p>Paste the new folder ID. You can also paste the full Google Drive folder link.</p>
+            <label for="o3p_drive_new_folder" class="form-label">Folder ID or link</label>
+            <input id="o3p_drive_new_folder" type="text" class="form-control"
+                   t-model="this.state.value" t-att-disabled="this.state.busy"
+                   t-att-aria-invalid="this.state.error ? 'true' : 'false'"
+                   aria-describedby="o3p_drive_folder_error"/>
+            <div t-if="this.state.error" id="o3p_drive_folder_error"
+                 class="alert alert-danger mt-3 mb-0" role="alert" t-out="this.state.error"/>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-danger" t-on-click="this.onConfirm"
+                        t-att-disabled="this.state.busy || !this.state.value.trim()">
+                    <t t-if="this.state.busy">Validating…</t>
+                    <t t-else="">Change folder</t>
+                </button>
+                <button type="button" class="btn btn-secondary"
+                        t-on-click="() => this.props.close()" t-att-disabled="this.state.busy">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
     <t t-name="o3p_google_drive.GoogleDriveExplorerField">
         <section class="o_o3p_drive_explorer"
                  t-ref="this.explorerRef"
@@ -50,6 +71,13 @@
                     <span class="d-none d-lg-inline ms-1">Open in Google Drive</span>
                 </button>
 
+                <button t-if="this.canChangeFolder" type="button" class="btn btn-danger"
+                        title="Change the linked folder"
+                        t-att-disabled="this.state.loading || this.state.refreshing"
+                        t-on-click="this.onChangeFolder">
+                    <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"/>
+                    Change
+                </button>
                 <div class="btn-group" role="group" aria-label="View mode">
                     <button type="button"
                             title="Details view"

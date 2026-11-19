@@ -1,7 +1,8 @@
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import requests
 
@@ -413,6 +414,34 @@ class GoogleDriveItem(models.Model):
         if generate_thumbnails:
             self.env["o3p.google.drive.thumbnail.job"]._enqueue_items(descendants)
         return True
+
+    @api.model
+    def validate_explorer_folder(self, value, register=False):
+        """Validate live Google metadata before changing the field."""
+        try:
+            path = urlsplit((value or "").strip()).path.rstrip("/")
+        except ValueError as error:
+            raise UserError(_("Paste a valid Google Drive folder ID or folder link.")) from error
+        gid = path.rsplit("/", 1)[-1]
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", gid):
+            raise UserError(_("Paste a valid Google Drive folder ID or folder link."))
+        try:
+            item = self.new({"gid": gid})._fetch_google_item()
+        except (UserError, requests.RequestException) as error:
+            raise UserError(_(
+                "Could not access this folder. Check the ID and make sure it is "
+                "shared with the configured Google Drive account."
+            )) from error
+        if item.get("mimeType") != GOOGLE_FOLDER_MIME_TYPE:
+            raise UserError(_(
+                "This ID belongs to a file, not a folder. Please enter a folder ID or link."
+            ))
+        if item.get("trashed"):
+            raise UserError(_("This folder is in the trash. Restore it or choose another folder."))
+        result = {"gid": gid, "name": item.get("name") or gid}
+        if register:
+            result["id"] = self._upsert_google_item(item).id
+        return result
 
     @api.model
     def get_explorer_folder(self, folder_id):

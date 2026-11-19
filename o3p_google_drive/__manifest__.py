@@ -8,8 +8,9 @@
     "version": "20.0.2.18.5",
     "category": "Productivity/Documents",
     "author": "O3P",
-    "website": "https://github.com/odoo-third-party/o3p-google-drive",
+    "website": "https://github.com/o3p-universe/o3p-google-drive",
     "license": "LGPL-3",
+    "sequence": 1,
     "depends": ["base_setup"],
     "external_dependencies": {
         "python": ["requests", "Pillow"],
